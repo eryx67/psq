@@ -8,7 +8,9 @@
 %%%-------------------------------------------------------------------
 -module(pid_psq).
 
--export([new/0, add/2, add/3, delete/2, peek_min/1, get_min/1, inc_priority/2, dec_priority/2]).
+-export([new/0, add/2, add/3, delete/2,
+         peek_min/1, peek_min_priority/1, get_min/1, get_min_priority/1,
+         inc_priority/2, dec_priority/2]).
 
 -spec new() -> psq:psq().
 new() ->
@@ -30,13 +32,34 @@ delete(Pid, PSQ) ->
 
 -spec peek_min(psq:psq()) -> undefined | {ok, pid()}.
 peek_min(PSQ) ->
-    maybe(psq:find_min(PSQ), undefined, fun ({_, _, Pid}) -> {ok, Pid} end).
+    case peek_min_priority(PSQ) of
+        {ok, {Pid, _}} ->
+            {ok, Pid};
+        undefined ->
+            undefined
+    end.
 
-%% @doc Get pid with minimal priority and increase its priority by 1.
+-spec peek_min_priority(psq:psq()) -> undefined | {ok, {pid(), psq:priority()}}.
+peek_min_priority(PSQ) ->
+    maybe(psq:find_min(PSQ), undefined, fun ({_, Prio, Pid}) -> {ok, {Pid, Prio}} end).
+
+%% @doc Get `pid' with minimal priority and increase its priority by 1.
 -spec get_min(psq:psq()) -> undefined | {ok, {pid(), psq:psq()}}.
 get_min(PSQ) ->
+    case get_min_priority(PSQ) of
+        {ok, {{Pid, _}, PSQ1}} ->
+            {ok, {Pid, PSQ1}};
+        undefined ->
+            undefined
+    end.
+
+%% @doc Get `pid' and its priority where `pid' has minimal
+%% `priority' and increase its `priority' by 1.
+%% @end
+-spec get_min_priority(psq:psq()) -> undefined | {ok, {{pid(), psq:priority()}, psq:psq()}}.
+get_min_priority(PSQ) ->
     {Res, PSQ1} = psq:alter_min(fun ({just, {K, P, Pid}}) ->
-                                        {{just, Pid}, {just, {K, P+1, Pid}}};
+                                        {{just, {Pid, P+1}}, {just, {K, P+1, Pid}}};
                                     (nothing) ->
                                         nothing
                                 end, PSQ),
@@ -95,8 +118,8 @@ pid_psq_test_() ->
                                             ?assert(is_reference(Pid)),
                                             Q1
                                     end, Q, Pids),
-                   ?_assertEqual(lists:sort([{P, Pid} || {_, P, Pid} <- psq:to_list(Q1)]),
-                                 lists:sort(lists:zip(lists:duplicate(length(Pids), 1), Pids)))
+                   ?assertEqual(lists:sort([{P, Pid} || {_, P, Pid} <- psq:to_list(Q1)]),
+                                lists:sort(lists:zip(lists:duplicate(length(Pids), 1), Pids)))
                 end),
              ?_test(
                 begin
@@ -106,15 +129,15 @@ pid_psq_test_() ->
                                             {ok, Q1} = Res,
                                             Q1
                                     end, Q, Pids),
-                   ?_assertEqual(lists:sort([{P, Pid} || {_, P, Pid} <- psq:to_list(Q2)]),
-                                 lists:sort(lists:zip(lists:duplicate(length(Pids), 1), Pids))),
+                    ?assertEqual(lists:sort([{P, Pid} || {_, P, Pid} <- psq:to_list(Q2)]),
+                                  lists:sort(lists:zip(lists:duplicate(length(Pids), 1), Pids))),
                     Q3 = lists:foldl(fun (Pid, Q0) ->
                                             Res = pid_psq:dec_priority(Pid, Q0),
                                             ?assertMatch({ok, _}, Res),
                                             {ok, Q1} = Res,
                                             Q1
-                                    end, Q, Pids),
-                   ?_assertEqual(lists:sort([{P, Pid} || {_, P, Pid} <- psq:to_list(Q3)]),
+                                    end, Q2, Pids),
+                   ?assertEqual(lists:sort([{P, Pid} || {_, P, Pid} <- psq:to_list(Q3)]),
                                  lists:sort(lists:zip(lists:duplicate(length(Pids), 0), Pids)))
                 end)
             ]
