@@ -63,7 +63,7 @@ get_min_priority(PSQ) ->
                                     (nothing) ->
                                         nothing
                                 end, PSQ),
-    maybe(Res, undefined, fun (Pid) -> {ok, {Pid, PSQ1}} end).
+    maybe(Res, undefined, fun (V) -> {ok, {V, PSQ1}} end).
 
 -spec inc_priority(pid(), psq:psq()) -> undefined | {ok, psq:psq()}.
 inc_priority(Pid, PSQ) ->
