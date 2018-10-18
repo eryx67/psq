@@ -367,13 +367,13 @@ insert_view(K, P, V, PSQ) ->
 -spec delete_view(key(), psq()) -> maybe({priority(), value(), psq()}).
 delete_view(K, PSQ) ->
     case delete_view_1(K, PSQ) of
-      {nothing, _} -> nothing;
+      {_, nothing} -> nothing;
       {Q, {just, {P, V}}} -> {just, {P, V, Q}}
     end.
 
 delete_view_1(K, PSQ) ->
     case PSQ of
-        nil -> { nil, nothing };
+        nil -> {nil, nothing};
         #tip{key=K, prio=P1, val=V1} ->
             { nil, {just, {P1, V1}} };
         #tip{} ->
