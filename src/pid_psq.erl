@@ -10,7 +10,8 @@
 
 -export([new/0, add/2, add/3, delete/2,
          peek_min/1, peek_min_priority/1, get_min/1, get_min_priority/1,
-         inc_priority/2, dec_priority/2]).
+         inc_priority/2, dec_priority/2,
+         pid_to_int/1]).
 
 -spec new() -> psq:psq().
 new() ->
@@ -61,7 +62,7 @@ get_min_priority(PSQ) ->
     {Res, PSQ1} = psq:alter_min(fun ({just, {K, P, Pid}}) ->
                                         {{just, {Pid, P+1}}, {just, {K, P+1, Pid}}};
                                     (nothing) ->
-                                        nothing
+                                        {nothing, nothing}
                                 end, PSQ),
     maybe(Res, undefined, fun (V) -> {ok, {V, PSQ1}} end).
 
@@ -78,7 +79,7 @@ upd_priority(Pid, SetF, PSQ) ->
     {Res, PSQ1} = psq:alter(fun ({just, {P, V}}) ->
                                     {{just, P}, {just, {SetF(P), V}}};
                                 (nothing) ->
-                                    nothing
+                                    {nothing, nothing}
                             end, Key, PSQ),
     maybe(Res, undefined, fun (_Prio) -> {ok, PSQ1} end).
 
@@ -106,9 +107,14 @@ pid_psq_test_() ->
     end,
     fun (Pids) ->
             Q = lists:foldl(fun pid_psq:add/2, pid_psq:new(), Pids),
+            NotInQ = erlang:make_ref(),
             [?_assertEqual(lists:sort([{P, Pid} || {_, P, Pid} <- psq:to_list(Q)]),
                            lists:sort(lists:zip(lists:duplicate(length(Pids), 0), Pids))),
              ?_assertMatch({ok, _}, pid_psq:peek_min(Q)),
+             {"Change of priority for not existing element does nothing",
+              ?_assertEqual(undefined, pid_psq:inc_priority(NotInQ, Q))},
+             {"get_min on empty psq should return 'undefined'",
+              ?_assertEqual(undefined, pid_psq:get_min(pid_psq:new()))},
              ?_test(
                 begin
                     Q1 = lists:foldl(fun (_, Q0) ->
