@@ -1,6 +1,6 @@
 {application, psq,
  [{description, "Priority Search Queue"},
-  {vsn, "1.0.0"},
+  {vsn, semver},
   {registered, []},
   {applications,
    [kernel,
