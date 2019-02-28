@@ -1,6 +1,6 @@
-{application, psq,
+{application, erlang_psq,
  [{description, "Priority Search Queue"},
-  {vsn, semver},
+  {vsn, "1.0.0"},
   {registered, []},
   {applications,
    [kernel,
@@ -8,7 +8,6 @@
    ]},
   {env,[]},
   {modules, []},
-  {maintainers, []},
   {licenses, ["Apache 2.0"]},
-  {links, []}
+  {links, [{"GitHub", "https://github.com/eryx67/psq"}]}
  ]}.
